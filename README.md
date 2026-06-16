@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/devopsier/castor/main/docs/assets/castor-logo.svg" alt="Castor Logo" width="120" height="120" />
+<img src="https://raw.githubusercontent.com/devopsier/castor/main/docs/assets/castor-logo.png" alt="Castor Logo" width="140" />
 
 # Castor
 
