@@ -33,7 +33,7 @@ logger: structlog.BoundLogger = structlog.get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 _CONFIG_PATH_ENV = "CASTOR_CONFIG_PATH"
-_DEFAULT_CONFIG = Path(__file__).parent.parent.parent.parent / "config.toml"
+_DEFAULT_CONFIG = Path(__file__).parent.parent.parent / "config.toml"
 
 
 def load_config(path: Path | None = None) -> dict[str, Any]:
