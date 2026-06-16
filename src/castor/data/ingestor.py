@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import datetime as dt
 import enum
-import logging
 from typing import Any
 
 import httpx

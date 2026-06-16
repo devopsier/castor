@@ -26,7 +26,7 @@ Endpoints exposed:
 
 from __future__ import annotations
 
-import datetime as dt
+import asyncio
 from typing import Annotated, Any
 
 import structlog
@@ -182,13 +182,11 @@ async def predict(
        subscribed to the ``spike_imminent`` event **asynchronously** (the HTTP
        response is not blocked on webhook delivery).
     """
-    import asyncio
-
     logger.info("predict_request_received", metric=body.metric.value)
 
     try:
         df = ingestor.fetch_metric(body.metric)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.error("ingestor_error", exc_info=exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

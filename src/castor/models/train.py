@@ -29,7 +29,6 @@ Typical usage::
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any
 
@@ -39,7 +38,6 @@ import pandas as pd
 import structlog
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-from sklearn.model_selection import train_test_split
 
 logger: structlog.BoundLogger = structlog.get_logger(__name__)
 
