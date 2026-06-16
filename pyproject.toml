@@ -1,0 +1,119 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "castor"
+version = "0.1.0"
+description = "Predictive Pod/Cluster Steering — ML-powered traffic spike forecasting for Kubernetes."
+authors = [{ name = "DevOpsier", url = "https://github.com/devopsier" }]
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.11"
+keywords = ["kubernetes", "machine-learning", "prometheus", "xgboost", "keda", "autoscaling", "forecasting"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Clustering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Typing :: Typed",
+]
+
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn[standard]>=0.29.0",
+    "xgboost>=2.0.3",
+    "pandas>=2.2.2",
+    "numpy>=1.26.4",
+    "httpx>=0.27.0",
+    "scikit-learn>=1.4.2",
+    "joblib>=1.4.2",
+    "pydantic>=2.7.0",
+    "structlog>=24.2.0",
+    "tenacity>=8.3.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "httpx>=0.27.0",
+    "ruff>=0.4.7",
+    "mypy>=1.10.0",
+    "pre-commit>=3.7.0",
+    "pandas-stubs>=2.2.2.240514",
+]
+
+[project.scripts]
+castor = "castor.main:run"
+
+[project.urls]
+Homepage = "https://github.com/devopsier/castor"
+Repository = "https://github.com/devopsier/castor"
+Documentation = "https://github.com/devopsier/castor/wiki"
+"Bug Tracker" = "https://github.com/devopsier/castor/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/castor"]
+
+# ---------------------------------------------------------------------------
+# uv tool configuration
+# ---------------------------------------------------------------------------
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.4.7",
+    "mypy>=1.10.0",
+    "pre-commit>=3.7.0",
+    "pandas-stubs>=2.2.2.240514",
+]
+
+# ---------------------------------------------------------------------------
+# Ruff linter / formatter
+# ---------------------------------------------------------------------------
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "ANN", "SIM", "RUF"]
+ignore = ["ANN101", "ANN102", "ANN401"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["ANN", "S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# Mypy strict type checking
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = false
+plugins = ["pydantic.mypy"]
+
+# ---------------------------------------------------------------------------
+# Pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "--cov=castor --cov-report=term-missing --cov-report=xml"
+
+[tool.coverage.run]
+source = ["src/castor"]
+omit = ["tests/*"]

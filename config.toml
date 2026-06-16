@@ -1,0 +1,117 @@
+# =============================================================================
+# Castor — Configuration File
+# All values are parsed natively with Python's built-in `tomllib`.
+# Copy this file and rename it to `config.local.toml` for local overrides.
+# =============================================================================
+
+[castor]
+# Human-readable deployment name; used in logs and webhook payloads.
+deployment_name = "castor-dev"
+# Log level: "DEBUG" | "INFO" | "WARNING" | "ERROR"
+log_level = "INFO"
+# Environment tag: "development" | "staging" | "production"
+environment = "development"
+
+# ---------------------------------------------------------------------------
+# HTTP API Server
+# ---------------------------------------------------------------------------
+[server]
+host = "0.0.0.0"
+port = 8080
+# Number of Uvicorn worker processes (1 for dev, match CPU cores in prod)
+workers = 1
+# Enable automatic reload (development only)
+reload = false
+
+# ---------------------------------------------------------------------------
+# Prometheus Data Source
+# ---------------------------------------------------------------------------
+[prometheus]
+# Base URL of the Prometheus HTTP API
+url = "http://prometheus.monitoring.svc.cluster.local:9090"
+# PromQL query to retrieve CPU utilisation (0.0 – 1.0)
+query_cpu = "avg(rate(container_cpu_usage_seconds_total[5m])) by (namespace, pod)"
+# PromQL query to retrieve memory usage (bytes)
+query_memory = "avg(container_memory_working_set_bytes) by (namespace, pod)"
+# PromQL query to retrieve inbound HTTP request rate (req/s)
+query_http_rps = "sum(rate(http_requests_total[5m])) by (handler)"
+# How far back to pull historical data on each training run (hours)
+lookback_hours = 72
+# Prometheus step resolution (seconds)
+step_seconds = 60
+# Connection / read timeout for Prometheus queries (seconds)
+timeout_seconds = 30
+
+# ---------------------------------------------------------------------------
+# Scheduler — how often Castor re-evaluates and re-trains
+# ---------------------------------------------------------------------------
+[scheduler]
+# Interval between live metric ingestion cycles (seconds)
+ingest_interval_seconds = 60
+# Interval between incremental model re-training runs (seconds)
+retrain_interval_seconds = 3600
+# Forecast horizon: generate predictions this many minutes into the future
+forecast_horizon_minutes = 30
+
+# ---------------------------------------------------------------------------
+# Machine Learning Model
+# ---------------------------------------------------------------------------
+[model]
+# Directory where trained model artefacts (.ubj files) are persisted
+artifact_dir = "./artifacts/models"
+# Lag windows (in minutes) used as regression features
+lag_windows = [5, 15, 30, 60, 120]
+# Rolling-window statistics sizes (in minutes)
+rolling_windows = [10, 30, 60]
+# Fraction of data held out for validation during training
+validation_split = 0.15
+# XGBoost hyper-parameters
+[model.xgb_params]
+n_estimators = 300
+max_depth = 6
+learning_rate = 0.05
+subsample = 0.8
+colsample_bytree = 0.8
+objective = "reg:squarederror"
+tree_method = "hist"
+device = "cpu"   # Change to "cuda" if a GPU is available
+seed = 42
+
+# ---------------------------------------------------------------------------
+# Spike Detection Thresholds
+# ---------------------------------------------------------------------------
+[thresholds]
+# Predicted CPU ratio above which a spike alert is triggered
+cpu_spike_ratio = 0.80
+# Predicted HTTP RPS increase (%) above which a spike alert is triggered
+http_rps_spike_pct = 50.0
+# Minimum confidence score (0.0 – 1.0) required to fire a webhook
+min_confidence = 0.70
+
+# ---------------------------------------------------------------------------
+# Webhook Engine
+# ---------------------------------------------------------------------------
+[webhooks]
+# Global request timeout for outbound webhook POST calls (seconds)
+timeout_seconds = 10
+# Maximum retry attempts on transient failures (5xx / network errors)
+max_retries = 3
+# Base back-off delay between retries (seconds); uses exponential back-off
+retry_backoff_seconds = 2.0
+# Shared HMAC secret for signing webhook payloads (set via env: CASTOR_WEBHOOK_SECRET)
+# Leave empty to disable signature verification.
+secret = ""
+
+# List of statically configured webhook targets.
+# Additional targets can be registered dynamically via the REST API.
+[[webhooks.targets]]
+name    = "keda-http-scaler"
+url     = "http://keda-http-add-on.keda.svc.cluster.local/scale-trigger"
+events  = ["spike_imminent", "spike_resolved"]
+headers = { "X-Source" = "castor", "Content-Type" = "application/json" }
+
+[[webhooks.targets]]
+name    = "slack-alerts"
+url     = "https://hooks.slack.com/services/REPLACE/WITH/YOUR_WEBHOOK"
+events  = ["spike_imminent"]
+headers = { "Content-Type" = "application/json" }
