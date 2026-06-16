@@ -26,7 +26,6 @@ Endpoints exposed:
 
 from __future__ import annotations
 
-import datetime as dt
 from typing import Annotated, Any
 
 import structlog
@@ -199,10 +198,11 @@ async def predict(
     response = _to_response(result)
 
     if result.spike_imminent:
-        asyncio.create_task(
+        task = asyncio.create_task(
             dispatcher.fire_event("spike_imminent", result.to_dict()),
             name=f"webhook_spike_{body.metric.value}",
         )
+        del task
         logger.warning(
             "spike_imminent_detected",
             metric=body.metric.value,
@@ -279,8 +279,7 @@ async def list_webhooks(
 ) -> list[WebhookResponse]:
     """Return all currently registered webhook targets (static + dynamic)."""
     return [
-        WebhookResponse(name=t.name, url=t.url, events=t.events)
-        for t in dispatcher.list_targets()
+        WebhookResponse(name=t.name, url=t.url, events=t.events) for t in dispatcher.list_targets()
     ]
 
 

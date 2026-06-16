@@ -63,7 +63,7 @@ class PredictionResult:
     spike_imminent: bool
     threshold_used: float
     evaluated_at: dt.datetime = dataclasses.field(
-        default_factory=lambda: dt.datetime.now(tz=dt.timezone.utc)
+        default_factory=lambda: dt.datetime.now(tz=dt.UTC)
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -98,18 +98,16 @@ class SpikePredictor:
     def __init__(self, config: dict[str, Any]) -> None:
         self._config = config
         self._model_cfg: dict[str, Any] = config.get("model", {})
-        self._artifact_dir: Path = Path(
-            self._model_cfg.get("artifact_dir", "./artifacts/models")
-        )
+        self._artifact_dir: Path = Path(self._model_cfg.get("artifact_dir", "./artifacts/models"))
         self._threshold_cfg: dict[str, Any] = config.get("thresholds", {})
         self._horizon_minutes: int = int(
             config.get("scheduler", {}).get("forecast_horizon_minutes", 30)
         )
         self._lag_windows: list[int] = list(self._model_cfg.get("lag_windows", [5, 15, 30, 60]))
-        self._rolling_windows: list[int] = list(self._model_cfg.get("rolling_windows", [10, 30, 60]))
-        self._min_confidence: float = float(
-            self._threshold_cfg.get("min_confidence", 0.70)
+        self._rolling_windows: list[int] = list(
+            self._model_cfg.get("rolling_windows", [10, 30, 60])
         )
+        self._min_confidence: float = float(self._threshold_cfg.get("min_confidence", 0.70))
 
         # Lazy model cache: MetricKind → SpikePredictorXGB
         self._model_cache: dict[MetricKind, SpikePredictorXGB] = {}
@@ -239,7 +237,7 @@ class SpikePredictor:
             leaf_std: float = float(np.std(leaves[0]))
             # Sigmoid-based normalisation: low std → high confidence
             confidence: float = float(1.0 / (1.0 + leaf_std / 10.0))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.warning("confidence_estimation_failed", exc_info=exc)
             confidence = 0.5  # Fallback: indeterminate confidence
 

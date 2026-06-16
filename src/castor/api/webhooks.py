@@ -137,9 +137,7 @@ class WebhookDispatcher:
         self._timeout: float = float(wh_cfg.get("timeout_seconds", 10))
         self._max_retries: int = int(wh_cfg.get("max_retries", 3))
         self._backoff_base: float = float(wh_cfg.get("retry_backoff_seconds", 2.0))
-        self._secret: str = os.environ.get(
-            "CASTOR_WEBHOOK_SECRET", wh_cfg.get("secret", "")
-        )
+        self._secret: str = os.environ.get("CASTOR_WEBHOOK_SECRET", wh_cfg.get("secret", ""))
 
         # Build initial target registry from static config
         self._targets: dict[str, WebhookTarget] = {}
@@ -225,7 +223,7 @@ class WebhookDispatcher:
         # Enrich payload with Castor metadata
         enriched: dict[str, Any] = {
             "event": event,
-            "emitted_at": dt.datetime.now(tz=dt.timezone.utc).isoformat(),
+            "emitted_at": dt.datetime.now(tz=dt.UTC).isoformat(),
             "source": "castor",
             **payload,
         }
@@ -278,11 +276,9 @@ class WebhookDispatcher:
                 wait=wait_exponential(
                     multiplier=self._backoff_base,
                     min=self._backoff_base,
-                    max=self._backoff_base * (2 ** self._max_retries),
+                    max=self._backoff_base * (2**self._max_retries),
                 ),
-                retry=retry_if_exception_type(
-                    (httpx.TransportError, httpx.TimeoutException)
-                ),
+                retry=retry_if_exception_type((httpx.TransportError, httpx.TimeoutException)),
                 reraise=False,
             ):
                 with attempt:
@@ -316,7 +312,7 @@ class WebhookDispatcher:
                         event=event,
                         status_code=last_status_code,
                         attempts=attempt_count,
-                        delivered_at=dt.datetime.now(tz=dt.timezone.utc),
+                        delivered_at=dt.datetime.now(tz=dt.UTC),
                         success=True,
                     )
 
@@ -328,7 +324,7 @@ class WebhookDispatcher:
                 attempts=attempt_count,
                 exc_info=exc,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error(
                 "webhook_delivery_unexpected_error",
                 target=target.name,
@@ -341,7 +337,7 @@ class WebhookDispatcher:
             event=event,
             status_code=last_status_code,
             attempts=attempt_count,
-            delivered_at=dt.datetime.now(tz=dt.timezone.utc),
+            delivered_at=dt.datetime.now(tz=dt.UTC),
             success=False,
         )
 
@@ -357,7 +353,7 @@ class WebhookDispatcher:
         await self._async_client.aclose()
         logger.info("webhook_dispatcher_closed")
 
-    async def __aenter__(self) -> "WebhookDispatcher":
+    async def __aenter__(self) -> WebhookDispatcher:
         return self
 
     async def __aexit__(self, *_: object) -> None:

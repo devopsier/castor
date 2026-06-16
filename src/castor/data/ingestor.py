@@ -19,8 +19,7 @@ from __future__ import annotations
 
 import datetime as dt
 import enum
-import logging
-from typing import Any
+from typing import Any, ClassVar
 
 import httpx
 import numpy as np
@@ -35,7 +34,7 @@ logger: structlog.BoundLogger = structlog.get_logger(__name__)
 # ---------------------------------------------------------------------------
 
 
-class MetricKind(str, enum.Enum):
+class MetricKind(enum.StrEnum):
     """Enumeration of the metric types Castor can ingest."""
 
     CPU = "cpu"
@@ -121,7 +120,7 @@ def _synthetic_metric(
     Returns:
         A ``pandas.DataFrame`` with columns ``["timestamp", "value", "labels"]``.
     """
-    end = dt.datetime.now(tz=dt.timezone.utc)
+    end = dt.datetime.now(tz=dt.UTC)
     start = end - dt.timedelta(hours=lookback_hours)
     freq = pd.tseries.frequencies.to_offset(f"{step_seconds}s")
     timestamps = pd.date_range(start=start, end=end, freq=freq, tz="UTC")
@@ -132,7 +131,7 @@ def _synthetic_metric(
 
     match metric_kind:
         case MetricKind.CPU:
-            # CPU ratio: 0.15 – 0.95 with a sine wave and spike
+            # CPU ratio: 0.15 - 0.95 with a sine wave and spike
             baseline = 0.35 + 0.20 * np.sin(t) + rng.normal(0, 0.02, n)
             spike_idx = n // 2
             baseline[spike_idx : spike_idx + 30] += 0.45
@@ -142,7 +141,7 @@ def _synthetic_metric(
             baseline = (0.5 + 0.1 * np.sin(t)) * 512 * 1024 * 1024
             values = baseline + rng.normal(0, 10 * 1024 * 1024, n)
         case MetricKind.HTTP_RPS:
-            # HTTP req/s: workday pattern, 10–800 rps
+            # HTTP req/s: workday pattern, 10-800 rps
             baseline = 200 + 300 * np.sin(t / 2) + rng.normal(0, 15, n)
             spike_idx = int(n * 0.65)
             baseline[spike_idx : spike_idx + 20] += 500
@@ -152,7 +151,7 @@ def _synthetic_metric(
         {
             "timestamp": timestamps,
             "value": values,
-            "labels": f"{{synthetic=\"true\", metric=\"{metric_kind.value}\"}}",
+            "labels": f'{{synthetic="true", metric="{metric_kind.value}"}}',
         }
     )
     logger.warning(
@@ -186,7 +185,7 @@ class PrometheusIngestor:
     """
 
     # PromQL query config keys by MetricKind
-    _QUERY_KEYS: dict[MetricKind, str] = {
+    _QUERY_KEYS: ClassVar[dict[MetricKind, str]] = {
         MetricKind.CPU: "query_cpu",
         MetricKind.MEMORY: "query_memory",
         MetricKind.HTTP_RPS: "query_http_rps",
@@ -238,7 +237,7 @@ class PrometheusIngestor:
             logger.warning("missing_promql_query", metric=kind.value, key=query_key)
             return self._fallback(kind)
 
-        end = dt.datetime.now(tz=dt.timezone.utc)
+        end = dt.datetime.now(tz=dt.UTC)
         start = end - dt.timedelta(hours=self._lookback_hours)
 
         params: dict[str, str] = {
@@ -280,8 +279,7 @@ class PrometheusIngestor:
         if self._synthetic_fallback:
             return _synthetic_metric(kind, self._lookback_hours, self._step_seconds)
         raise RuntimeError(
-            f"Prometheus query failed for metric '{kind.value}' and synthetic "
-            "fallback is disabled."
+            f"Prometheus query failed for metric '{kind.value}' and synthetic fallback is disabled."
         )
 
     def close(self) -> None:
@@ -292,7 +290,7 @@ class PrometheusIngestor:
         self._client.close()
         logger.info("prometheus_ingestor_closed")
 
-    def __enter__(self) -> "PrometheusIngestor":
+    def __enter__(self) -> PrometheusIngestor:
         return self
 
     def __exit__(self, *_: object) -> None:

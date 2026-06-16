@@ -22,7 +22,6 @@ from fastapi.testclient import TestClient
 from castor.data.ingestor import MetricKind, PrometheusIngestor, _synthetic_metric
 from castor.models.train import SpikePredictorXGB, build_features
 
-
 # ---------------------------------------------------------------------------
 # Shared Fixtures
 # ---------------------------------------------------------------------------

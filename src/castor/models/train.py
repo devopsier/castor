@@ -29,7 +29,6 @@ Typical usage::
 
 from __future__ import annotations
 
-import logging
 from pathlib import Path
 from typing import Any
 
@@ -39,7 +38,6 @@ import pandas as pd
 import structlog
 import xgboost as xgb
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-from sklearn.model_selection import train_test_split
 
 logger: structlog.BoundLogger = structlog.get_logger(__name__)
 
@@ -145,12 +143,12 @@ def build_features(
 
     # -- Lag features -------------------------------------------------------
     for lag_min in lag_windows:
-        lag_periods = max(1, int(round(lag_min / step_minutes)))
+        lag_periods = max(1, round(lag_min / step_minutes))
         df[f"lag_{lag_min}m"] = df["value"].shift(lag_periods)
 
     # -- Rolling statistics -------------------------------------------------
     for win_min in rolling_windows:
-        win_periods = max(1, int(round(win_min / step_minutes)))
+        win_periods = max(1, round(win_min / step_minutes))
         roll = df["value"].rolling(window=win_periods, min_periods=1)
         df[f"roll_mean_{win_min}m"] = roll.mean()
         df[f"roll_std_{win_min}m"] = roll.std().fillna(0.0)
@@ -166,7 +164,7 @@ def build_features(
     df["hour_cos"] = np.cos(2 * np.pi * df["hour_of_day"] / 24.0)
 
     # -- Target (forward shift) ---------------------------------------------
-    horizon_periods = max(1, int(round(horizon_minutes / step_minutes)))
+    horizon_periods = max(1, round(horizon_minutes / step_minutes))
     df["target"] = df["value"].shift(-horizon_periods)
 
     # Drop rows with missing values caused by lag/shift
@@ -224,9 +222,7 @@ class SpikePredictorXGB:
         self._lag_windows: list[int] = list(model_cfg.get("lag_windows", [5, 15, 30, 60, 120]))
         self._rolling_windows: list[int] = list(model_cfg.get("rolling_windows", [10, 30, 60]))
         self._validation_split: float = float(model_cfg.get("validation_split", 0.15))
-        self._horizon_minutes: int = int(
-            sched_cfg.get("forecast_horizon_minutes", 30)
-        )
+        self._horizon_minutes: int = int(sched_cfg.get("forecast_horizon_minutes", 30))
         self._use_asymmetric_loss: bool = True
 
         xgb_params: dict[str, Any] = dict(model_cfg.get("xgb_params", {}))
@@ -295,7 +291,9 @@ class SpikePredictorXGB:
 
         if self._use_asymmetric_loss:
             # XGBoost custom objective: pass a closure that captures no mutable state
-            def _objective(y_pred: np.ndarray, dtrain: xgb.DMatrix) -> tuple[np.ndarray, np.ndarray]:
+            def _objective(
+                y_pred: np.ndarray, dtrain: xgb.DMatrix
+            ) -> tuple[np.ndarray, np.ndarray]:
                 return asymmetric_mse_objective(y_pred, dtrain, under_penalty=2.5)
 
             self.model.set_params(objective=_objective)
@@ -346,7 +344,7 @@ class SpikePredictorXGB:
         return path
 
     @classmethod
-    def load(cls, path: Path, config: dict[str, Any]) -> "SpikePredictorXGB":
+    def load(cls, path: Path, config: dict[str, Any]) -> SpikePredictorXGB:
         """Load a previously saved model from disk.
 
         Args:
