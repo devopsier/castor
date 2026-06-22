@@ -143,12 +143,12 @@ def build_features(
 
     # -- Lag features -------------------------------------------------------
     for lag_min in lag_windows:
-        lag_periods = max(1, int(round(lag_min / step_minutes)))
+        lag_periods = max(1, round(lag_min / step_minutes))
         df[f"lag_{lag_min}m"] = df["value"].shift(lag_periods)
 
     # -- Rolling statistics -------------------------------------------------
     for win_min in rolling_windows:
-        win_periods = max(1, int(round(win_min / step_minutes)))
+        win_periods = max(1, round(win_min / step_minutes))
         roll = df["value"].rolling(window=win_periods, min_periods=1)
         df[f"roll_mean_{win_min}m"] = roll.mean()
         df[f"roll_std_{win_min}m"] = roll.std().fillna(0.0)
@@ -164,7 +164,7 @@ def build_features(
     df["hour_cos"] = np.cos(2 * np.pi * df["hour_of_day"] / 24.0)
 
     # -- Target (forward shift) ---------------------------------------------
-    horizon_periods = max(1, int(round(horizon_minutes / step_minutes)))
+    horizon_periods = max(1, round(horizon_minutes / step_minutes))
     df["target"] = df["value"].shift(-horizon_periods)
 
     # Drop rows with missing values caused by lag/shift
@@ -293,7 +293,10 @@ class SpikePredictorXGB:
 
         if self._use_asymmetric_loss:
             # XGBoost custom objective: pass a closure that captures no mutable state
-            def _objective(y_pred: np.ndarray, dtrain: xgb.DMatrix) -> tuple[np.ndarray, np.ndarray]:
+            def _objective(
+                y_pred: np.ndarray,
+                dtrain: xgb.DMatrix,
+            ) -> tuple[np.ndarray, np.ndarray]:
                 return asymmetric_mse_objective(y_pred, dtrain, under_penalty=2.5)
 
             self.model.set_params(objective=_objective)
@@ -344,7 +347,7 @@ class SpikePredictorXGB:
         return path
 
     @classmethod
-    def load(cls, path: Path, config: dict[str, Any]) -> "SpikePredictorXGB":
+    def load(cls, path: Path, config: dict[str, Any]) -> SpikePredictorXGB:
         """Load a previously saved model from disk.
 
         Args:

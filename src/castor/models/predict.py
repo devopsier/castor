@@ -63,7 +63,7 @@ class PredictionResult:
     spike_imminent: bool
     threshold_used: float
     evaluated_at: dt.datetime = dataclasses.field(
-        default_factory=lambda: dt.datetime.now(tz=dt.timezone.utc)
+        default_factory=lambda: dt.datetime.now(tz=dt.UTC)
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -106,7 +106,9 @@ class SpikePredictor:
             config.get("scheduler", {}).get("forecast_horizon_minutes", 30)
         )
         self._lag_windows: list[int] = list(self._model_cfg.get("lag_windows", [5, 15, 30, 60]))
-        self._rolling_windows: list[int] = list(self._model_cfg.get("rolling_windows", [10, 30, 60]))
+        self._rolling_windows: list[int] = list(
+            self._model_cfg.get("rolling_windows", [10, 30, 60])
+        )
         self._min_confidence: float = float(
             self._threshold_cfg.get("min_confidence", 0.70)
         )

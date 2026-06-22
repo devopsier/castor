@@ -11,9 +11,10 @@ from __future__ import annotations
 import asyncio
 import os
 import tomllib
-from contextlib import asynccontextmanager
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import structlog
 import uvicorn
@@ -103,10 +104,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         yield  # Application is live
     finally:
         ingest_task.cancel()
-        try:
+        with suppress(asyncio.CancelledError):
             await ingest_task
-        except asyncio.CancelledError:
-            pass
         logger.info("castor_shutdown_complete")
 
 
@@ -122,7 +121,7 @@ async def _periodic_ingest(state: AppState) -> None:
             await loop.run_in_executor(None, state.ingestor.fetch_all)
         except asyncio.CancelledError:
             break
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error("periodic_ingest_error", exc_info=exc)
 
 

@@ -186,7 +186,7 @@ async def predict(
 
     try:
         df = ingestor.fetch_metric(body.metric)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("ingestor_error", exc_info=exc)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -197,7 +197,7 @@ async def predict(
     response = _to_response(result)
 
     if result.spike_imminent:
-        asyncio.create_task(
+        _task = asyncio.create_task(
             dispatcher.fire_event("spike_imminent", result.to_dict()),
             name=f"webhook_spike_{body.metric.value}",
         )

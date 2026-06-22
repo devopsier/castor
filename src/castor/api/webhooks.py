@@ -225,7 +225,7 @@ class WebhookDispatcher:
         # Enrich payload with Castor metadata
         enriched: dict[str, Any] = {
             "event": event,
-            "emitted_at": dt.datetime.now(tz=dt.timezone.utc).isoformat(),
+            "emitted_at": dt.datetime.now(tz=dt.UTC).isoformat(),
             "source": "castor",
             **payload,
         }
@@ -316,7 +316,7 @@ class WebhookDispatcher:
                         event=event,
                         status_code=last_status_code,
                         attempts=attempt_count,
-                        delivered_at=dt.datetime.now(tz=dt.timezone.utc),
+                        delivered_at=dt.datetime.now(tz=dt.UTC),
                         success=True,
                     )
 
@@ -328,7 +328,7 @@ class WebhookDispatcher:
                 attempts=attempt_count,
                 exc_info=exc,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.error(
                 "webhook_delivery_unexpected_error",
                 target=target.name,
@@ -341,7 +341,7 @@ class WebhookDispatcher:
             event=event,
             status_code=last_status_code,
             attempts=attempt_count,
-            delivered_at=dt.datetime.now(tz=dt.timezone.utc),
+            delivered_at=dt.datetime.now(tz=dt.UTC),
             success=False,
         )
 
@@ -357,7 +357,7 @@ class WebhookDispatcher:
         await self._async_client.aclose()
         logger.info("webhook_dispatcher_closed")
 
-    async def __aenter__(self) -> "WebhookDispatcher":
+    async def __aenter__(self) -> WebhookDispatcher:
         return self
 
     async def __aexit__(self, *_: object) -> None:
